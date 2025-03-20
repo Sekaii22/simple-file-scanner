@@ -1,0 +1,4 @@
+This is within file2
+Just.minding_my.own.BUSINESS_HERE
+woops_kidding_heres_some_MALICIOUS_CODE_running
+backToNormalExecution
