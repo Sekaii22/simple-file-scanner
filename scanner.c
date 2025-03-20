@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <sys/stat.h>
 #define BUFFER_SIZE 1024
 
 void strToLower(char *str) {
@@ -14,12 +15,52 @@ void strToLower(char *str) {
     return;
 }
 
+int isFile(const char *path) {
+    struct stat stats;
+    int isPathExist;
+
+    // fill stats with data about the path given
+    // stat() returns 0 if successful
+    isPathExist = stat(path, &stats);
+
+    // S_ISREG returns non-zero if path is a regular file
+    if (isPathExist == 0 && S_ISREG(stats.st_mode)) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int isDir(const char *path) {
+    struct stat stats;
+    int isPathExist;
+
+    isPathExist = stat(path, &stats);
+
+    // S_ISDIR returns non-zero if path is a dir
+    if (isPathExist == 0 && S_ISDIR(stats.st_mode)) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
 
     if (argc == 1) {
         printf("No arguments was given\n");
     } 
     else if (argc > 1) {
+        // path is at argc[1], check if path is a reg file or a dir
+        if (isFile(argv[1])) {
+            printf("Path given is a file\n");
+        }
+
+        if (isDir(argv[1])) {
+            printf("Path given is a directory\n");
+        }
+
+
         // define malware signatures
         char signatures[][100] = {
             "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*",
