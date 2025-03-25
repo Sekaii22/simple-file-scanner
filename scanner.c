@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <time.h>
 #define BUFFER_SIZE 1024
 #define MAX_PATH 256
 
@@ -61,19 +62,57 @@ int isDir(const char *path) {
 /*
     Print scan result to console.
 */
-void printScan(char *sigFound, const char *path) {
-    if (sigFound) {
+void printScan(char *sigFound, const char *path, const int noOfThreats, const char mode) {
+    if (mode == 's') {
+        printf("Currently scanning: %s\n", path);
+    }
+    else if (mode == 'm') {
         printf("\033[0;31m");       // red text
-        printf("Malware signature: %s\ndetected in: %s!\n", sigFound, path);
-        printf("\033[0m");          // reset color
-    } 
-    else {
-        printf("\033[0;32m");       // green text
-        printf("Found nothing in: %s\n", path);
+        printf("Malware signature: %s\nDetected in: %s!\n", sigFound, path);
         printf("\033[0m");          // reset color
     }
+    else if (mode == 'c') {
+        printf("Scanning completed, %d threats were found.\n", noOfThreats);
+    }
+    else {
+        printf("No corresponding mode!");
+    }
+}
 
-    return;
+/*
+    Logs result to a file.
+*/
+void logScan(char *sigFound, const char *path, const int noOfThreats, const char mode) {
+    // mode: (s - currently scanning) (m - malware detected) (c - completed) (t - time)
+    FILE *pWriteFile = fopen("scan.log", "a");
+    
+    if (mode == 's') {
+        fprintf(pWriteFile, "Currently scanning: %s\n", path);
+    }
+    else if (mode == 'm') {
+        fprintf(pWriteFile, "Malware signature: %s\nDetected in: %s!\n", sigFound, path);
+    }
+    else if (mode == 'c') {
+        fprintf(pWriteFile, "Scanning completed, %d threats were found.\n", noOfThreats);
+    }
+    else if (mode == 't') {
+        // logs current date and time
+        struct tm *pCalenderTime;
+        time_t timeInSec = time(NULL);
+
+        // fill calender time structure info using timeInSec
+        pCalenderTime = localtime(&timeInSec);
+
+        // write the date in a certain format
+        char timeBuffer[70];
+        strftime(timeBuffer, sizeof timeBuffer, "%a %d/%m/%y %T", pCalenderTime);
+        fprintf(pWriteFile, "\n%s\n", timeBuffer);
+    }
+    else {
+        printf("No corresponding mode!");
+    }
+
+    fclose(pWriteFile);
 }
 
 /* 
@@ -81,7 +120,8 @@ void printScan(char *sigFound, const char *path) {
     Return 1 if malware signature found, otherwise return 0.
 */
 int sigScanF(char signatures[][100], int sigCount, char *path) {
-    printf("Currently scanning: %s\n", path);
+    printScan(NULL, path, 0, 's');
+    logScan(NULL, path, 0, 's');
 
     // open and read file
     char buffer[BUFFER_SIZE];
@@ -94,7 +134,8 @@ int sigScanF(char signatures[][100], int sigCount, char *path) {
         // check the buffer against each signature
         for (int i = 0; i < sigCount; i++) {
             if (strstr(buffer, signatures[i])) {
-                printScan(signatures[i], path);
+                printScan(signatures[i], path, 0, 'm');
+                logScan(signatures[i], path, 0, 'm');
                 fclose(pFile);
                 return 1;
             }
@@ -114,33 +155,31 @@ int sigScanDir(char signatures[][100], int sigCount, char *path) {
     int result = 0;
 
     // dirent represent a file in the directory
-    struct dirent *directoryEntry;              
+    struct dirent *pDirectoryEntry;              
                 
     // opens the directory
-    DIR *directory = opendir(path);
+    DIR *pDirectory = opendir(path);
 
     // for each entry in the directory
-    while (directoryEntry = readdir(directory)) {
+    while (pDirectoryEntry = readdir(pDirectory)) {
         // ignore . and .. and hidden files beginning with .
-        if (directoryEntry->d_name[0] != '.') {
+        if (pDirectoryEntry->d_name[0] != '.') {
 
             char newPath[MAX_PATH+1] = "";                                              // +1 for null char
-            sprintf(newPath, "%s/%s", path, directoryEntry->d_name);
+            sprintf(newPath, "%s/%s", path, pDirectoryEntry->d_name);
             printf("Path detected: %s\n", newPath);
 
             // check if entry is a file or directory
             if (isFile(newPath)) {
-                int r = sigScanF(signatures, sigCount, newPath);
-                result = r > result ? r : result;
+                result += sigScanF(signatures, sigCount, newPath);
             }
             else if (isDir(newPath)) {
-                int r = sigScanDir(signatures, sigCount, newPath);
-                result = r > result ? r : result;
+                result += sigScanDir(signatures, sigCount, newPath);
             }
         }
     }
 
-    closedir(directory);
+    closedir(pDirectory);
     
     return result;
 }
@@ -161,32 +200,31 @@ int main(int argc, char *argv[]) {
     }
 
     if (argc == 1) {
-        printf("No arguments was given\n");
+        printf("No argument given!\n");
     } 
     else if (argc > 1) {
-        // path is at argv[1], check if path is a reg file or a dir
+        logScan(NULL, NULL, 0, 't');
+        int noOfThreats = 0;
 
+        // path is at argv[1], check if path is a reg file or a dir
         if (isFile(argv[1])) {
-            printf("Path given is a file\n");
+            printf("Path given is a file.\n");
         
             // scan the file for signatures
-            if (sigScanF(signatures, numOfSignatures, argv[1]) == 0){
-                printScan(NULL, argv[1]);
-            }
+            noOfThreats = sigScanF(signatures, numOfSignatures, argv[1]);
         }
         else if (isDir(argv[1])) {
-            printf("Path given is a directory\n");
+            printf("Path given is a directory.\n");
 
             // scan directory
-            if (sigScanDir(signatures, numOfSignatures, argv[1]) == 0) {
-                printScan(NULL, argv[1]);
-            };
+            noOfThreats = sigScanDir(signatures, numOfSignatures, argv[1]);
         }
         else {
             printf("No such file or directory exists!\n");
         }
         
-        printf("Scanning completed!\n");
+        printScan(NULL, NULL, noOfThreats, 'c');
+        logScan(NULL, NULL, noOfThreats, 'c');
     }
 
     return 0;
