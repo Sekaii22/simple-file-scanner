@@ -4,9 +4,13 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <time.h>
+#include <stdlib.h>
 
 #define BUFFER_SIZE 1024
 #define MAX_PATH 256
+#define MAX_LINE 1000
+#define MAX_SIG_LENGTH 100
+#define SIGNATURE_PATH "lookout.txt"
 
 /*
     Modify in place string to lowercase. 
@@ -120,7 +124,7 @@ void logScan(char *sigFound, const char *path, const int noOfThreats, const char
     Scans a single file.
     Return 1 if malware signature found, otherwise return 0.
 */
-int sigScanF(char signatures[][100], int sigCount, char *path) {
+int sigScanF(char *signatures[MAX_LINE], int sigCount, char *path) {
     printScan(NULL, path, 0, 's');
     logScan(NULL, path, 0, 's');
 
@@ -152,7 +156,7 @@ int sigScanF(char signatures[][100], int sigCount, char *path) {
     Scans a directory.
     Return 1 if malware signature found, otherwise return 0.
 */ 
-int sigScanDir(char signatures[][100], int sigCount, char *path) {
+int sigScanDir(char *signatures[MAX_LINE], int sigCount, char *path) {
     int result = 0;
 
     // dirent represent a file in the directory
@@ -185,25 +189,52 @@ int sigScanDir(char signatures[][100], int sigCount, char *path) {
     return result;
 }
 
-int main(int argc, char *argv[]) {
-    char signatures[][100] = {
-        "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*",
-        "malicious_code",
-        "SUSPICIOUSFUNCTIONCALL",
-        "ransomware.startup",
-    };
+int getSignatures(char *path, char *output[MAX_LINE]) {
+    // open file
+    FILE *pSigFile = fopen(path, "r");
+    char buffer[MAX_SIG_LENGTH];
+    int count = 0;
 
-    int numOfSignatures = sizeof(signatures) / sizeof(signatures[0]);
+    // while file not read finished
+    while (fgets(buffer, MAX_SIG_LENGTH, pSigFile) && count < MAX_LINE) {
+        buffer[strcspn(buffer, "\n")] = 0;              // remove newline char
+        printf("%s\n", buffer);
 
-    // change signatures to lowercase
-    for (int i = 0; i < numOfSignatures; i++) {
-        strToLower(signatures[i]);
+        output[count] = malloc(strlen(buffer) + 1);
+        if (output[count] == NULL) {
+            printf("unable to allocate memory \n");
+            return -1;
+        };
+        strcpy(output[count], buffer);
+        count++;
     }
 
+    fclose(pSigFile);
+    return count;
+}
+
+int main(int argc, char *argv[]) {
     if (argc == 1) {
         printf("No argument given!\n");
     } 
     else if (argc > 1) {
+        /*
+        char signatures[][100] = {
+            "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*",
+            "malicious_code",
+            "SUSPICIOUSFUNCTIONCALL",
+            "ransomware.startup",
+        };
+        */
+        
+        char *signatures[MAX_LINE];
+        int numOfSignatures = getSignatures(SIGNATURE_PATH, signatures);
+    
+        // change signatures to lowercase
+        for (int i = 0; i < numOfSignatures; i++) {
+            strToLower(signatures[i]);
+        }
+
         logScan(NULL, NULL, 0, 't');
         int noOfThreats = 0;
 
@@ -226,6 +257,10 @@ int main(int argc, char *argv[]) {
         
         printScan(NULL, NULL, noOfThreats, 'c');
         logScan(NULL, NULL, noOfThreats, 'c');
+
+        for (int i = 0; i < numOfSignatures; i++) {
+            free(signatures[i]);
+        }
     }
 
     return 0;
