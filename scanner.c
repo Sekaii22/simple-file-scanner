@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <time.h>
+
 #define BUFFER_SIZE 1024
 #define MAX_PATH 256
 
@@ -68,7 +69,7 @@ void printScan(char *sigFound, const char *path, const int noOfThreats, const ch
     }
     else if (mode == 'm') {
         printf("\033[0;31m");       // red text
-        printf("Malware signature: %s\nDetected in: %s!\n", sigFound, path);
+        printf("Malware signature: %s\nDetected in: %s\n", sigFound, path);
         printf("\033[0m");          // reset color
     }
     else if (mode == 'c') {
