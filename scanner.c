@@ -4,6 +4,8 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <time.h>
+#include <fuzzy.h>
+
 #define BUFFER_SIZE 1024
 #define MAX_PATH 256
 
@@ -68,7 +70,7 @@ void printScan(char *sigFound, const char *path, const int noOfThreats, const ch
     }
     else if (mode == 'm') {
         printf("\033[0;31m");       // red text
-        printf("Malware signature: %s\nDetected in: %s!\n", sigFound, path);
+        printf("Malware signature: %s\nDetected in: %s\n", sigFound, path);
         printf("\033[0m");          // reset color
     }
     else if (mode == 'c') {
@@ -193,6 +195,8 @@ int main(int argc, char *argv[]) {
     };
 
     int numOfSignatures = sizeof(signatures) / sizeof(signatures[0]);
+    char ssdeepHash[FUZZY_MAX_RESULT] = "";
+    int isSuccessfulHash;
 
     // change signatures to lowercase
     for (int i = 0; i < numOfSignatures; i++) {
@@ -212,6 +216,7 @@ int main(int argc, char *argv[]) {
         
             // scan the file for signatures
             noOfThreats = sigScanF(signatures, numOfSignatures, argv[1]);
+            int isSuccessfulHash = fuzzy_hash_filename(argv[1], ssdeepHash);
         }
         else if (isDir(argv[1])) {
             printf("Path given is a directory.\n");
@@ -223,6 +228,12 @@ int main(int argc, char *argv[]) {
             printf("No such file or directory exists!\n");
         }
         
+
+        if (isSuccessfulHash == 0) {
+            printf("ssdeep: %s\n", ssdeepHash);
+        } else {
+            printf("Unsuccessful hash generation!");
+        }
         printScan(NULL, NULL, noOfThreats, 'c');
         logScan(NULL, NULL, noOfThreats, 'c');
     }
