@@ -199,7 +199,7 @@ int getSignatures(char *path, char *output[MAX_LINE]) {
     // while file not read finished
     while (fgets(buffer, MAX_SIG_LENGTH, pSigFile) && count < MAX_LINE) {
         buffer[strcspn(buffer, "\n")] = 0;              // remove newline char
-        printf("%s\n", buffer);
+        //printf("%s\n", buffer);
 
         output[count] = malloc(strlen(buffer) + 1);
         if (output[count] == NULL) {
@@ -248,6 +248,12 @@ int main(int argc, char *argv[]) {
             // scan the file for signatures
             noOfThreats = sigScanF(signatures, numOfSignatures, argv[1]);
             int isSuccessfulHash = fuzzy_hash_filename(argv[1], ssdeepHash);
+
+            if (isSuccessfulHash == 0) {
+                printf("ssdeep: %s\n", ssdeepHash);
+            } else {
+                printf("Unsuccessful hash generation!");
+            }
         }
         else if (isDir(argv[1])) {
             printf("Path given is a directory.\n");
@@ -259,12 +265,6 @@ int main(int argc, char *argv[]) {
             printf("No such file or directory exists!\n");
         }
         
-
-        if (isSuccessfulHash == 0) {
-            printf("ssdeep: %s\n", ssdeepHash);
-        } else {
-            printf("Unsuccessful hash generation!");
-        }
         printScan(NULL, NULL, noOfThreats, 'c');
         logScan(NULL, NULL, noOfThreats, 'c');
 
