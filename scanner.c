@@ -198,7 +198,7 @@ int getSignatures(char *path, char *output[MAX_LINE]) {
     // while file not read finished
     while (fgets(buffer, MAX_SIG_LENGTH, pSigFile) && count < MAX_LINE) {
         buffer[strcspn(buffer, "\n")] = 0;              // remove newline char
-        printf("%s\n", buffer);
+        //printf("%s\n", buffer);
 
         output[count] = malloc(strlen(buffer) + 1);
         if (output[count] == NULL) {
