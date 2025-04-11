@@ -4,7 +4,7 @@ Scans a file or directory for predefined malware signatures (specific strings fo
 
 Use the other available branch for fuzzy hash generation on files.
 
-Compilation on Linux (Ubuntu):
+Compilation on Linux (Debian):
 
     $ gcc -o scanner scanner.c
 
